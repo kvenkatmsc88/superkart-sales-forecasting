@@ -20,5 +20,17 @@ docker build -t superkart-frontend ./frontend_files
 docker run -d --name superkart-frontend --network $NETWORK -p 8501:8501 \
     -e BACKEND_URL=http://superkart-backend:7860 superkart-frontend
 
+# Check that the frontend can reach the backend through the Docker network.
+# In some GitHub Codespaces, traffic between containers on a user-defined network is blocked
+# (requests time out). In that case, run the frontend on the host network and reach the
+# backend through its published port 7860 instead.
+sleep 5
+if ! docker exec superkart-frontend python -c "import requests; requests.get('http://superkart-backend:7860', timeout=5)" 2>/dev/null; then
+    echo "Backend not reachable over $NETWORK - restarting the frontend on the host network"
+    docker rm -f superkart-frontend
+    docker run -d --name superkart-frontend --network host \
+        -e BACKEND_URL=http://localhost:7860 superkart-frontend
+fi
+
 docker ps
 echo "Backend  -> port 7860 | Frontend -> port 8501 (see the Ports tab of the Codespace)"
